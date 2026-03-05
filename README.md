@@ -21,3 +21,16 @@ DMEI is a groundbreaking lookup mechanism that achieves **O(1) constant-time** p
 ```bash
 g++ -O3 main.cpp -o dmei_bench
 ./dmei_bench
+### 3. קובץ הניסוח לפטנט: `PATENT_CLAIMS.txt`
+שמור את זה כדי שיהיה לך מוכן להגשה ל-USPTO (ארה"ב) או לרשם הפטנטים בארץ.
+
+```text
+INVENTION TITLE: Method for Non-Deterministic Constant-Time Symbolic Resolution
+
+CLAIM 1: A method for resolving a symbolic string identifier into a memory index characterized by:
+   a) Sampling a subset of characters from said string to generate a base hash;
+   b) Capturing the runtime memory address of the identifier object;
+   c) Applying a bitwise XOR operation between the base hash, a shifted version of the memory address, and a predetermined prime constant;
+   d) Constraining the result to a fixed table size using a bitmask.
+
+CLAIM 2: The method of claim 1, further comprising a boot-time verification step that iterates through a plurality of prime constants to ensure zero collisions within the current execution's address space.
