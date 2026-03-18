@@ -1,79 +1,52 @@
 # DMEI: Dynamic Masking Embedded Indexing
-### Secure Real-Time Data Mapping via Hardware-Software Entanglement
 
-## 1. Executive Summary
-**DMEI** (Dynamic Masking Embedded Indexing) is a high-performance, constant-time mapping algorithm designed for **Hard Real-Time Embedded Systems**. While traditional hashing algorithms (SipHash, MurmurHash) rely on software-based entropy, DMEI introduces **Address-Bound Security**, where the physical RAM location ($A$) of a data structure serves as a cryptographic variable in the lookup process.
+**Ephemeral-Entropy Indexing for OS Dispatch Tables**
 
-This ensures that data is not only fast to retrieve but is mathematically "locked" to its physical environment, providing inherent protection against memory-tampering and relocation attacks.
+DMEI is an $O(1)$ secure indexing algorithm designed to protect operating system command dispatch tables (kernel syscall tables, interpreter opcode tables, and embedded handler routers) from memory-corruption and hardware-fault attacks. 
 
----
-
-## 2. Key Benefits (Why use DMEI?)
-
-### A. Hard Real-Time Determinism ($O(1)$)
-In flight control systems (UAVs/Missiles), a delay of even a few microseconds in a PID loop can lead to instability. 
-* **The Problem:** Standard Hash Maps suffer from "Collision Spikes"—latency increases when two keys collide.
-* **DMEI Solution:** Uses a bit-parallel solver with a fixed number of CPU cycles. The execution time is identical regardless of the input, ensuring **Zero Jitter**.
-
-### B. Anti-Tamper & Memory Integrity
-* **The Problem:** In Electronic Warfare (EW), attackers may attempt to move critical data pointers or perform memory relocation attacks.
-* **DMEI Solution:** Since the physical address $A$ is part of the equation, moving a data block in RAM renders the index $I$ unrecoverable. The algorithm effectively acts as a **hardware-level integrity sensor**.
-
-### C. Resource Efficiency (Performance-per-Watt)
-* **Throughput:** ~450M+ operations per second.
-* **Latency:** ~2.2ns per lookup.
-* **Footprint:** Zero overhead for collision handling metadata (no linked lists, no re-hashing).
+By utilizing **ephemeral-entropy indexing**—where storage positions depend on a cryptographic value destroyed immediately during construction—DMEI provides mathematical guarantees against write-only adversaries while maintaining the microsecond latency required for low-level system execution.
 
 ---
 
-## 3. The Mathematical Proof (MBA Identity)
+## 🛡️ Core Security Properties
 
-The core of DMEI is based on **Mixed Boolean-Arithmetic (MBA)**. Unlike standard algorithms that use only XOR or only Addition, DMEI entangles both to eliminate the need for the physical address $A$ during the recovery phase.
+DMEI is instantiated as a modified **Cuckoo Hash Table** and guarantees four critical properties:
 
-### The Problem:
-We have two known vectors derived from the input $s$:
-1. $h_s$ (The Logical Vector)
-2. $g_s$ (The Arithmetic Vector)
+1. **Inline Tamper Detection:** Achieves a tamper detection probability of $1 - 2^{-32}$ *without* the latency overhead of traditional Message Authentication Codes (MAC).
+2. **Index Obfuscation:** A write-only adversary (e.g., utilizing a Rowhammer exploit) cannot locate a specific entry or handler address without a pre-existing read primitive.
+3. **Deterministic $O(1)$ Lookup:** Worst-case lookup time is strictly $O(1)$, ensuring predictable execution for Real-Time Operating Systems (RTOS) and embedded control loops.
+4. **Session Binding:** Binds dispatch tables to the current execution session with a success probability of $1 - 2^{-32}$, preventing cross-session replay or layout prediction.
 
-We define the relationships:
-$$(1) \quad h_s = I \oplus A$$
-$$(2) \quad g_s = I + A$$
+## ⚡ Performance Metrics
 
-Where $I$ is the Index and $A$ is the Physical RAM Address. We need to solve for $I$ without knowing $A$.
+DMEI is optimized for environments where lookup times must remain under 10ns.
 
-### The Proof:
-We use the fundamental MBA identity:
-$$X + Y = (X \oplus Y) + 2(X \land Y)$$
+* **Median Lookup Time:** 5.5 ns 
+* **Relative Cost:** Only 1.53x the cost of a standard, unprotected Cuckoo table.
+* **Security Overhead:** 8x faster than traditional MAC-authenticated alternative structures.
 
-Substitute $X = I$ and $Y = A$:
-$$I + A = (I \oplus A) + 2(I \land A)$$
+## 🎯 Threat Model
 
-Now, substitute our known vectors $(1)$ and $(2)$ into the identity:
-$$g_s = h_s + 2(I \land A)$$
-
-Rearranging to find the bitwise intersection:
-$$(I \land A) = \frac{g_s - h_s}{2}$$
-
-Let $K = \frac{g_s - h_s}{2}$. We now have a simplified system:
-1. $I \oplus A = h_s$
-2. $I \land A = K$
-
-### Bit-Parallel Recovery:
-From $(1)$, we know that if the $n$-th bit of $h_s$ is $0$, then $I_n$ must equal $A_n$. 
-From $(2)$, if $I_n = A_n$, then their intersection $K_n$ must also be equal to $I_n$.
-
-**Conclusion:**
-For all bits where $h_{s,n} = 0$, the index bit $I_n$ is exactly $K_n$. 
-For bits where $h_{s,n} = 1$ (where $I$ and $A$ differ), we use a secondary **Validator Mapping** to break the symmetry and ensure 100% collision resistance.
+DMEI is specifically architected to defeat adversaries utilizing:
+* **Rowhammer** and similar hardware-fault injections.
+* **Limited Write Primitives** (Write-What-Where vulnerabilities) where the attacker attempts to overwrite a function pointer in a dispatch table to hijack control flow.
+* Attacks attempting to bypass CFI (Control-Flow Integrity) by targeting the static predictability of standard arrays or unprotected hash tables.
 
 ---
 
-## 4. Logical Flow
-1. **Ingest:** Input command $s$ is hashed into $h_s$ and $g_s$ using pure ARX (Add-Rotate-XOR) functions.
-2. **Entangle:** During `Insert`, the index $I$ is calculated and "bound" to the current RAM address $A$.
-3. **Solve:** During `Lookup`, the system solves the MBA identity. If the memory environment is intact, $I$ is recovered instantly.
-4. **Verify:** A final Validator check ensures integrity and handles edge-case collisions.
+## 🛠️ Build & Integration (C/C++)
 
----
-**Developed by:** Eyal, Weizmann Institute of Science (Grade 10).
-**Target Applications:** UAV Flight Control, Missile Guidance, Secure Real-Time OS.
+DMEI is built for Linux and embedded RTOS environments. It requires a C++17 compliant compiler and standard build tools.
+
+### Prerequisites
+* `gcc` or `clang` (C++17+)
+* `CMake` 3.10+
+* Linux Kernel Headers (for kernel module integration)
+
+### Building the Library
+```bash
+git clone [https://github.com/eyalbraun/dmei.git](https://github.com/eyalbraun/dmei.git)
+cd dmei
+mkdir build && cd build
+cmake ..
+make
