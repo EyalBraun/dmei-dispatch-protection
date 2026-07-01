@@ -1,52 +1,28 @@
-# DMEI: Dynamic Masking Embedded Indexing
+# DMEI: Dynamic Memory Encryption and Indirection
+A Proof-of-Concept implementation of a moving-target dispatch layer for hardware-register-bound secrets.
 
-**Ephemeral-Entropy Indexing for OS Dispatch Tables**
+## Overview
+DMEI is a defense-in-depth dispatch layer that prevents address resolution and control-flow hijacking without simultaneously holding all hardware-resident secrets. [cite_start]By combining AES-encrypted indirection, dual-trigger reshuffling, and per-lookup function-body integrity, it renders memory snapshots and static analysis obsolete[cite: 7, 8, 27].
 
-DMEI is an $O(1)$ secure indexing algorithm designed to protect operating system command dispatch tables (kernel syscall tables, interpreter opcode tables, and embedded handler routers) from memory-corruption and hardware-fault attacks. 
+## Core Features
+* [cite_start]**Two-Hop AES Indirection**: Secrets (K, T, E) remain exclusively in CPU registers[cite: 64, 71].
+* [cite_start]**Moving-Target Reshuffle**: Periodically rotates all secrets and table offsets to invalidate memory snapshots[cite: 66, 328].
+* [cite_start]**Integrity Binding**: Per-lookup function-body integrity using keyed MACs binds code content and canonical addresses[cite: 29].
+* [cite_start]**Caller IP Validation**: Enforces that functions can only be invoked from authorized call sites[cite: 31, 297].
+* [cite_start]**ROP Defense**: Encrypted return-address stack binding[cite: 33, 349].
 
-By utilizing **ephemeral-entropy indexing**—where storage positions depend on a cryptographic value destroyed immediately during construction—DMEI provides mathematical guarantees against write-only adversaries while maintaining the microsecond latency required for low-level system execution.
+## Prerequisites
+* **Architecture**: x86-64.
+* [cite_start]**Hardware Support**: AES-NI instructions required for constant-time performance[cite: 397].
+* **Compiler**: Must support `wmmintrin.h` and `immintrin.h` (GCC/Clang).
 
----
+## Quick Start
+1. Compile with `-maes` and `-msse4`.
+2. Run the included POC.
+3. Observe the `[DEBUG]` logs showing epoch rotation and integrity verification.
 
-## 🛡️ Core Security Properties
+## Warning
+This is a research-grade Proof of Concept. It is not intended for production systems. [cite_start]It assumes a trusted Ring 0 entity for initial key generation and requires hardware-level register protection assumptions[cite: 55, 56].
 
-DMEI is instantiated as a modified **Cuckoo Hash Table** and guarantees four critical properties:
-
-1. **Inline Tamper Detection:** Achieves a tamper detection probability of $1 - 2^{-32}$ *without* the latency overhead of traditional Message Authentication Codes (MAC).
-2. **Index Obfuscation:** A write-only adversary (e.g., utilizing a Rowhammer exploit) cannot locate a specific entry or handler address without a pre-existing read primitive.
-3. **Deterministic $O(1)$ Lookup:** Worst-case lookup time is strictly $O(1)$, ensuring predictable execution for Real-Time Operating Systems (RTOS) and embedded control loops.
-4. **Session Binding:** Binds dispatch tables to the current execution session with a success probability of $1 - 2^{-32}$, preventing cross-session replay or layout prediction.
-
-## ⚡ Performance Metrics
-
-DMEI is optimized for environments where lookup times must remain under 10ns.
-
-* **Median Lookup Time:** 5.5 ns 
-* **Relative Cost:** Only 1.53x the cost of a standard, unprotected Cuckoo table.
-* **Security Overhead:** 8x faster than traditional MAC-authenticated alternative structures.
-
-## 🎯 Threat Model
-
-DMEI is specifically architected to defeat adversaries utilizing:
-* **Rowhammer** and similar hardware-fault injections.
-* **Limited Write Primitives** (Write-What-Where vulnerabilities) where the attacker attempts to overwrite a function pointer in a dispatch table to hijack control flow.
-* Attacks attempting to bypass CFI (Control-Flow Integrity) by targeting the static predictability of standard arrays or unprotected hash tables.
-
----
-
-## 🛠️ Build & Integration (C/C++)
-
-DMEI is built for Linux and embedded RTOS environments. It requires a C++17 compliant compiler and standard build tools.
-
-### Prerequisites
-* `gcc` or `clang` (C++17+)
-* `CMake` 3.10+
-* Linux Kernel Headers (for kernel module integration)
-
-### Building the Library
-```bash
-git clone [https://github.com/eyalbraun/dmei.git](https://github.com/eyalbraun/dmei.git)
-cd dmei
-mkdir build && cd build
-cmake ..
-make
+## License
+MIT (or your chosen license)
