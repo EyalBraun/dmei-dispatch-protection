@@ -22,7 +22,7 @@ DMEI is a defense-in-depth dispatch layer that prevents address resolution and c
 3. Observe the `[DEBUG]` logs showing epoch rotation and integrity verification.
 
 ## Warning
-This is a research-grade Proof of Concept. It is not intended for production systems. [cite_start]It assumes a trusted Ring 0 entity for initial key generation and requires hardware-level register protection assumptions[cite: 55, 56].
+This is a research-grade Proof of Concept. It is not intended for production systems.It assumes a trusted Ring 0 entity for initial key generation and requires hardware-level register protection assumptions.
 
 ## License
 Copyright (c) 2026 Eyal. All rights reserved.
